@@ -15,8 +15,6 @@ export const sampleDatabaseStructure = {
   classroom: {
     motion_detected: false,
     people_count: 0,
-    temperature: 25.5,
-    humidity: 55.0,
     last_motion_time: Date.now(),
   },
   devices: {

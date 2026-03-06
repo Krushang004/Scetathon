@@ -40,8 +40,6 @@ npm install
   "classroom": {
     "motion_detected": false,
     "people_count": 0,
-    "temperature": 25,
-    "humidity": 50,
     "last_motion_time": 0
   },
   "devices": {
@@ -96,8 +94,6 @@ FirebaseData fbdo;
 Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
 // Send sensor data
-Firebase.setFloat("/classroom/temperature", temp);
-Firebase.setFloat("/classroom/humidity", humidity);
 Firebase.setBool("/classroom/motion_detected", motion);
 Firebase.setInt("/classroom/people_count", count);
 Firebase.setInt("/classroom/last_motion_time", timestamp);

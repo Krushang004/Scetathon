@@ -6,9 +6,8 @@ A modern IoT monitoring dashboard for a Smart Classroom Automation System using 
 
 - 🎥 **Live Camera Feed** - Real-time video stream from ESP32-CAM
 - 🔍 **Motion Detection** - Real-time motion status with people count
-- 🌡️ **Environment Monitoring** - Temperature and humidity tracking
 - 💡 **Device Control** - Remote control of lights and fans
-- 📊 **Analytics** - Charts showing temperature, humidity, and motion trends
+- 📊 **Analytics** - Charts showing motion activity, people count, and device usage
 - ⚡ **Real-time Updates** - Automatic updates via Firebase Realtime Database
 
 ## Tech Stack
@@ -94,8 +93,6 @@ A modern IoT monitoring dashboard for a Smart Classroom Automation System using 
      "classroom": {
        "motion_detected": false,
        "people_count": 0,
-       "temperature": 25,
-       "humidity": 50,
        "last_motion_time": 0
      },
      "devices": {
@@ -138,8 +135,6 @@ Your ESP32-CAM should send data to Firebase in the following format:
 
 ### Classroom Data
 ```cpp
-Firebase.setFloat("/classroom/temperature", temperature);
-Firebase.setFloat("/classroom/humidity", humidity);
 Firebase.setBool("/classroom/motion_detected", motionDetected);
 Firebase.setInt("/classroom/people_count", peopleCount);
 Firebase.setInt("/classroom/last_motion_time", timestamp);
@@ -168,7 +163,7 @@ dashboard/
 ├── components/
 │   ├── CameraFeed.tsx       # Camera feed component
 │   ├── MotionStatus.tsx     # Motion detection status
-│   ├── EnvironmentStats.tsx # Temperature & humidity display
+│   ├── EnvironmentStats.tsx # Classroom activity summary (no env sensors)
 │   ├── DeviceControls.tsx   # Device control panel
 │   └── AnalyticsCharts.tsx  # Analytics charts
 ├── firebase/
@@ -191,9 +186,7 @@ dashboard/
 - Last motion timestamp
 
 ### 3. Environment Stats
-- Temperature monitoring with color-coded status
-- Humidity levels
-- Room activity status
+- Classroom activity summary (motion / people count / last motion)
 
 ### 4. Device Controls
 - Toggle lights (Zone 1 & Zone 2)
@@ -201,9 +194,9 @@ dashboard/
 - Real-time state updates
 
 ### 5. Analytics Charts
-- Temperature & humidity trends (24h)
-- Motion detection activity
-- Device usage statistics
+- People count trend (24h)
+- Motion detection activity (24h)
+- Device usage status
 
 ## Customization
 

@@ -5,8 +5,6 @@ import { database } from './config';
 export interface ClassroomData {
   motion_detected: boolean;
   people_count: number;
-  temperature: number;
-  humidity: number;
   last_motion_time: number;
 }
 

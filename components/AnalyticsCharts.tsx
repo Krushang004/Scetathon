@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, Activity, Zap } from 'lucide-react';
 import { ClassroomData, DevicesData } from '@/firebase/listeners';
 
@@ -12,54 +12,50 @@ interface AnalyticsChartsProps {
 
 interface ChartDataPoint {
   time: string;
-  temperature: number;
-  humidity: number;
   motion: number;
+  people: number;
 }
 
 export default function AnalyticsCharts({ classroomData, devicesData }: AnalyticsChartsProps) {
-  const [temperatureData, setTemperatureData] = useState<ChartDataPoint[]>([]);
+  const [peopleData, setPeopleData] = useState<ChartDataPoint[]>([]);
   const [motionData, setMotionData] = useState<ChartDataPoint[]>([]);
-  const [deviceUsageData, setDeviceUsageData] = useState<any[]>([]);
+  const [deviceUsageData, setDeviceUsageData] = useState<{ device: string; usage: number }[]>([]);
 
   useEffect(() => {
     // Generate sample historical data (in production, fetch from Firebase)
     const generateSampleData = () => {
       const now = new Date();
-      const tempData: ChartDataPoint[] = [];
+      const pplData: ChartDataPoint[] = [];
       const motionDataPoints: ChartDataPoint[] = [];
 
       for (let i = 23; i >= 0; i--) {
         const time = new Date(now.getTime() - i * 60 * 60 * 1000);
         const hour = time.getHours();
-        
-        // Simulate temperature variation
-        const baseTemp = classroomData?.temperature || 25;
-        const temp = baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 3 + (Math.random() - 0.5) * 2;
-        
-        // Simulate humidity variation
-        const baseHumidity = classroomData?.humidity || 50;
-        const humidity = baseHumidity + Math.sin(hour / 24 * Math.PI * 2) * 10 + (Math.random() - 0.5) * 5;
-        
+
+        // Simulate people count variation
+        const basePeople = classroomData?.people_count ?? 0;
+        const people = Math.max(
+          0,
+          Math.round(basePeople + Math.sin(hour / 24 * Math.PI * 2) * 2 + (Math.random() - 0.5) * 3),
+        );
+
         // Simulate motion (0 or 1)
         const motion = Math.random() > 0.6 ? 1 : 0;
 
-        tempData.push({
+        pplData.push({
           time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          temperature: Math.max(15, Math.min(35, temp)),
-          humidity: Math.max(20, Math.min(90, humidity)),
           motion: 0,
+          people,
         });
 
         motionDataPoints.push({
           time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          temperature: 0,
-          humidity: 0,
           motion: motion,
+          people: 0,
         });
       }
 
-      setTemperatureData(tempData);
+      setPeopleData(pplData);
       setMotionData(motionDataPoints);
     };
 
@@ -87,14 +83,14 @@ export default function AnalyticsCharts({ classroomData, devicesData }: Analytic
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Temperature & Humidity Chart */}
+        {/* People Count Chart */}
         <div className="bg-dark-bg rounded-lg p-4">
           <h3 className="text-text-primary font-medium mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Temperature & Humidity (24h)
+            People Count (24h)
           </h3>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={temperatureData}>
+            <LineChart data={peopleData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#4A5C6A" />
               <XAxis 
                 dataKey="time" 
@@ -104,6 +100,7 @@ export default function AnalyticsCharts({ classroomData, devicesData }: Analytic
               <YAxis 
                 stroke="#9BA8AB"
                 tick={{ fill: '#9BA8AB', fontSize: 12 }}
+                allowDecimals={false}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -114,23 +111,15 @@ export default function AnalyticsCharts({ classroomData, devicesData }: Analytic
                 }}
               />
               <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="temperature" 
-                stroke="#fbbf24" 
-                fill="#fbbf24" 
-                fillOpacity={0.3}
-                name="Temperature (°C)"
+              <Line
+                type="monotone"
+                dataKey="people"
+                stroke="#60a5fa"
+                strokeWidth={2}
+                dot={false}
+                name="People"
               />
-              <Area 
-                type="monotone" 
-                dataKey="humidity" 
-                stroke="#60a5fa" 
-                fill="#60a5fa" 
-                fillOpacity={0.3}
-                name="Humidity (%)"
-              />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
         </div>
 
