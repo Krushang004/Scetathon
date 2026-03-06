@@ -23,11 +23,20 @@ npm install
    - Copy the `firebaseConfig` values
 
 4. Create `.env.local` file:
-   ```bash
-   cp .env.example .env.local
-   ```
+   Create `D:\krushang\projects\dashboard\.env.local` (manually) with:
 
-5. Fill in your Firebase credentials in `.env.local`
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyAFEHMiGCuwzzsSbUza9YEco4vGzqpsD0k
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=scetathon-ss.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=PASTE_YOUR_REALTIME_DB_URL_HERE
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=scetathon-ss
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=scetathon-ss.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=619210846571
+NEXT_PUBLIC_FIREBASE_APP_ID=1:619210846571:web:a9d9d2e2ffd9dc3313dc2e
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-QER9S1PS2C
+```
+
+**Important**: `NEXT_PUBLIC_FIREBASE_DATABASE_URL` is required for Realtime Database. Find it in Firebase Console → **Realtime Database → Data** (shown at the top).
 
 ## Step 3: Initialize Database Structure
 
