@@ -25,7 +25,7 @@ CAMERA_INDEX     = 1
 MOTION_COOLDOWN  = 5
 MIN_CONTOUR_AREA = 3000
 WARMUP_SECONDS   = 3
-STREAM_URL       = 'https://bustled-margarito-nitric.ngrok-free.dev/stream'  # ngrok URL
+STREAM_URL       = 'https://bustled-margarito-nitric.ngrok-free.dev/stream'
 # ──────────────────────────────────────────────────────────
 
 motion_detected  = False
@@ -92,7 +92,7 @@ def motion_loop():
                 push_to_firebase(False)
                 camera_ref.set({'live_feed_url': STREAM_URL})
                 print(f"[CAMERA] Stream URL pushed: {STREAM_URL}")
-            continue  # skip detection during warmup
+            continue
 
         # ── Contour detection ─────────────────────────────
         kernel  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
