@@ -23,11 +23,8 @@ export default function Dashboard() {
   const [cameraData, setCameraData] = useState<CameraData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dbConfigured, setDbConfigured] = useState(true);
 
   useEffect(() => {
-    setDbConfigured(isRealtimeDbConfigured());
-
     // Listen to classroom data
     const unsubscribeClassroom = listenToClassroom((data) => {
       setClassroomData(data);
@@ -92,7 +89,7 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!dbConfigured && (
+        {process.env.NODE_ENV !== 'production' && !isRealtimeDbConfigured() && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
             <div className="text-yellow-200 font-medium">Firebase Realtime Database is not configured</div>
             <div className="text-sm text-text-secondary mt-1">
