@@ -1,0 +1,162 @@
+# motion_server.py
+# pip install opencv-python flask firebase-admin flask-cors
+
+import cv2
+from flask import Flask, jsonify, Response
+from flask_cors import CORS
+import threading
+import time
+import firebase_admin
+from firebase_admin import credentials, db
+
+app = Flask(__name__)
+CORS(app)
+
+# ── Firebase Setup ─────────────────────────────────────────
+cred = credentials.Certificate("serviceAccountKey.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://scetathon-ss-default-rtdb.asia-southeast1.firebasedatabase.app'
+})
+motion_ref = db.reference('/classroom/motion')
+camera_ref = db.reference('/camera')
+
+# ── Settings ──────────────────────────────────────────────
+CAMERA_INDEX     = 1
+MOTION_COOLDOWN  = 5
+MIN_CONTOUR_AREA = 3000
+WARMUP_SECONDS   = 3
+STREAM_URL       = 'https://bustled-margarito-nitric.ngrok-free.dev/stream'  # ngrok URL
+# ──────────────────────────────────────────────────────────
+
+motion_detected  = False
+last_motion_time = 0
+lock             = threading.Lock()
+
+cap = cv2.VideoCapture(CAMERA_INDEX)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+cap.set(cv2.CAP_PROP_FPS, 30)
+
+if not cap.isOpened():
+    print(f"ERROR: Cannot open camera index {CAMERA_INDEX}")
+    exit(1)
+
+bg_subtractor = cv2.createBackgroundSubtractorMOG2(
+    history=500,
+    varThreshold=50,
+    detectShadows=False
+)
+
+def push_to_firebase(detected):
+    try:
+        motion_ref.set({
+            'status':       'Occupied' if detected else 'Empty',
+            'motion':       detected,
+            'last_updated': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'timestamp':    int(time.time() * 1000)
+        })
+        camera_ref.set({'live_feed_url': STREAM_URL})
+        print(f"[FIREBASE] Pushed: {'Occupied' if detected else 'Empty'}")
+    except Exception as e:
+        print(f"[FIREBASE ERROR] {e}")
+
+def generate_frames():
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+
+def motion_loop():
+    global motion_detected, last_motion_time
+
+    print(f"Learning background for {WARMUP_SECONDS}s — keep area clear...")
+    warmup_start = time.time()
+    warmed_up    = False
+    last_pushed  = None
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            time.sleep(0.05)
+            continue
+
+        fg_mask = bg_subtractor.apply(frame)
+
+        if not warmed_up:
+            if time.time() - warmup_start >= WARMUP_SECONDS:
+                warmed_up = True
+                print("Background learned! Motion detection active.")
+                push_to_firebase(False)
+                camera_ref.set({'live_feed_url': STREAM_URL})
+                print(f"[CAMERA] Stream URL pushed: {STREAM_URL}")
+            continue  # skip detection during warmup
+
+        # ── Contour detection ─────────────────────────────
+        kernel  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN,  kernel)
+        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel)
+        fg_mask = cv2.dilate(fg_mask, kernel, iterations=2)
+
+        contours, _ = cv2.findContours(
+            fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        human_detected = False
+        largest_area   = 0
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > largest_area:
+                largest_area = area
+            if area > MIN_CONTOUR_AREA:
+                human_detected = True
+                break
+        # ─────────────────────────────────────────────────
+
+        with lock:
+            if human_detected:
+                if not motion_detected:
+                    print(f"[MOTION] Human detected! Blob: {largest_area:.0f}px")
+                motion_detected  = True
+                last_motion_time = time.time()
+            else:
+                if motion_detected and (time.time() - last_motion_time > MOTION_COOLDOWN):
+                    motion_detected = False
+                    print("[CLEAR] No motion")
+
+            if motion_detected != last_pushed:
+                push_to_firebase(motion_detected)
+                last_pushed = motion_detected
+
+        time.sleep(0.05)
+
+@app.route('/motion')
+def motion_status():
+    with lock:
+        status = motion_detected
+        since  = round(time.time() - last_motion_time, 1)
+    return jsonify({"motion": status, "last_motion_seconds_ago": since})
+
+@app.route('/stream')
+def video_stream():
+    response = Response(
+        generate_frames(),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+    response.headers['ngrok-skip-browser-warning'] = 'true'
+    return response
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+
+if __name__ == '__main__':
+    print(f"Camera opened on index {CAMERA_INDEX}")
+    t = threading.Thread(target=motion_loop, daemon=True)
+    t.start()
+    time.sleep(0.5)
+    print(f"Motion server: http://0.0.0.0:5000")
+    print(f"Live stream:   {STREAM_URL}")
+    app.run(host='0.0.0.0', port=5000, threaded=True)
