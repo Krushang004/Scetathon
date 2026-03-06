@@ -1,5 +1,5 @@
 import { ref, onValue, off, set, get } from 'firebase/database';
-import { database } from './config';
+import { getRealtimeDatabase } from './config';
 
 // Types for Firebase data
 export interface ClassroomData {
@@ -28,15 +28,25 @@ export interface ManualOverrideData {
 export const listenToClassroom = (
   callback: (data: ClassroomData | null) => void
 ) => {
-  const classroomRef = ref(database, 'classroom');
-  
-  onValue(classroomRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
+  let classroomRef: ReturnType<typeof ref> | null = null;
+
+  (async () => {
+    const db = await getRealtimeDatabase();
+    if (!db) {
+      callback(null);
+      return;
+    }
+
+    classroomRef = ref(db, 'classroom');
+
+    onValue(classroomRef, (snapshot) => {
+      const data = snapshot.val();
+      callback(data);
+    });
+  })();
 
   return () => {
-    off(classroomRef);
+    if (classroomRef) off(classroomRef);
   };
 };
 
@@ -44,15 +54,25 @@ export const listenToClassroom = (
 export const listenToDevices = (
   callback: (data: DevicesData | null) => void
 ) => {
-  const devicesRef = ref(database, 'devices');
-  
-  onValue(devicesRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
+  let devicesRef: ReturnType<typeof ref> | null = null;
+
+  (async () => {
+    const db = await getRealtimeDatabase();
+    if (!db) {
+      callback(null);
+      return;
+    }
+
+    devicesRef = ref(db, 'devices');
+
+    onValue(devicesRef, (snapshot) => {
+      const data = snapshot.val();
+      callback(data);
+    });
+  })();
 
   return () => {
-    off(devicesRef);
+    if (devicesRef) off(devicesRef);
   };
 };
 
@@ -60,15 +80,25 @@ export const listenToDevices = (
 export const listenToCamera = (
   callback: (data: CameraData | null) => void
 ) => {
-  const cameraRef = ref(database, 'camera');
-  
-  onValue(cameraRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
+  let cameraRef: ReturnType<typeof ref> | null = null;
+
+  (async () => {
+    const db = await getRealtimeDatabase();
+    if (!db) {
+      callback(null);
+      return;
+    }
+
+    cameraRef = ref(db, 'camera');
+
+    onValue(cameraRef, (snapshot) => {
+      const data = snapshot.val();
+      callback(data);
+    });
+  })();
 
   return () => {
-    off(cameraRef);
+    if (cameraRef) off(cameraRef);
   };
 };
 
@@ -77,7 +107,9 @@ export const updateDevice = async (
   device: 'light_zone1' | 'light_zone2' | 'fan',
   value: boolean
 ) => {
-  const deviceRef = ref(database, `devices/${device}`);
+  const db = await getRealtimeDatabase();
+  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
+  const deviceRef = ref(db, `devices/${device}`);
   await set(deviceRef, value);
 };
 
@@ -86,13 +118,17 @@ export const updateManualOverride = async (
   device: 'light_zone1' | 'fan',
   value: boolean
 ) => {
-  const overrideRef = ref(database, `manual_override/${device}`);
+  const db = await getRealtimeDatabase();
+  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
+  const overrideRef = ref(db, `manual_override/${device}`);
   await set(overrideRef, value);
 };
 
 // Get historical data (for analytics)
 export const getHistoricalData = async (path: string) => {
-  const dataRef = ref(database, path);
+  const db = await getRealtimeDatabase();
+  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
+  const dataRef = ref(db, path);
   const snapshot = await get(dataRef);
   return snapshot.val();
 };

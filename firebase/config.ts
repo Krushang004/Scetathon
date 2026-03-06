@@ -1,5 +1,4 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 
 /**
  * Firebase configuration
@@ -30,10 +29,25 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Realtime Database
-export const database = getDatabase(app);
+export function isRealtimeDbConfigured() {
+  return Boolean(firebaseConfig.databaseURL);
+}
+
+/**
+ * Lazy Realtime Database getter.
+ *
+ * Why: Next.js may evaluate module code during prerender/build. If `databaseURL`
+ * is missing in the build environment (common on Vercel), eagerly calling
+ * `getDatabase()` can throw and fail the build.
+ */
+export async function getRealtimeDatabase() {
+  if (typeof window === 'undefined') return null;
+  if (!isRealtimeDbConfigured()) return null;
+  const dbMod = await import('firebase/database');
+  return dbMod.getDatabase(app);
+}
 
 /**
  * Optional: Firebase Analytics (only works in the browser).

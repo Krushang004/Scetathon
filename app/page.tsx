@@ -7,6 +7,7 @@ import MotionStatus from '@/components/MotionStatus';
 import EnvironmentStats from '@/components/EnvironmentStats';
 import DeviceControls from '@/components/DeviceControls';
 import AnalyticsCharts from '@/components/AnalyticsCharts';
+import { isRealtimeDbConfigured } from '@/firebase/config';
 import {
   listenToClassroom,
   listenToDevices,
@@ -22,12 +23,16 @@ export default function Dashboard() {
   const [cameraData, setCameraData] = useState<CameraData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dbConfigured, setDbConfigured] = useState(true);
 
   useEffect(() => {
+    setDbConfigured(isRealtimeDbConfigured());
+
     // Listen to classroom data
     const unsubscribeClassroom = listenToClassroom((data) => {
       setClassroomData(data);
-      setIsConnected(true);
+      // If Firebase is configured, any callback implies the client is running and listener is active.
+      setIsConnected(isRealtimeDbConfigured());
       setLoading(false);
     });
 
@@ -87,6 +92,16 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {!dbConfigured && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+            <div className="text-yellow-200 font-medium">Firebase Realtime Database is not configured</div>
+            <div className="text-sm text-text-secondary mt-1">
+              Set <code className="text-yellow-200">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code> in your environment
+              (Vercel Project → Settings → Environment Variables) and redeploy.
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
