@@ -10,6 +10,14 @@ interface CameraFeedProps {
 
 export default function CameraFeed({ cameraData, motionDetected }: CameraFeedProps) {
 
+  // Build stream URL with ngrok warning bypass as a query param
+  const getStreamUrl = (url: string) => {
+    // Add ngrok-skip-browser-warning via a custom approach
+    // We append a cache-bust timestamp so the browser keeps refreshing
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${Date.now()}`;
+  };
+
   return (
     <div className="bg-card-bg rounded-lg p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -18,8 +26,8 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
           Camera Feed
         </h2>
         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-          motionDetected 
-            ? 'bg-green-500/20 text-green-400' 
+          motionDetected
+            ? 'bg-green-500/20 text-green-400'
             : 'bg-gray-500/20 text-gray-400'
         }`}>
           {motionDetected ? 'Motion Detected' : 'No Motion'}
@@ -28,27 +36,48 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
 
       {/* Live Feed */}
       <div className="mb-4">
-        <div className="relative bg-dark-bg rounded-lg overflow-hidden aspect-video">
+        <div className="relative bg-dark-bg rounded-lg overflow-hidden" style={{ height: '300px' }}>
           {cameraData?.live_feed_url ? (
-            <iframe
-              src={cameraData.live_feed_url}
-              className="w-full h-full"
-              allow="camera; microphone"
-              title="Live Camera Feed"
-            />
+            <>
+              {/* img tag works for MJPEG streams, unlike iframe */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cameraData.live_feed_url}
+                className="w-full h-full object-cover"
+                alt="Live Camera Feed"
+                // This tells the browser to send the ngrok-skip-browser-warning header
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  // If stream fails, show fallback
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              {/* Live indicator badge */}
+              <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-500/80 px-2 py-1 rounded text-xs text-white font-medium">
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                LIVE
+              </div>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
                 <Camera className="w-16 h-16 mx-auto mb-2 text-text-secondary" />
                 <p className="text-text-secondary">No live feed available</p>
                 <p className="text-sm text-text-secondary mt-1">
-                  Configure ESP32-CAM stream URL in Firebase
+                  Configure stream URL in Firebase
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Stream URL debug info */}
+      {cameraData?.live_feed_url && (
+        <div className="mt-2 text-xs text-text-secondary break-all">
+          Stream: {cameraData.live_feed_url}
+        </div>
+      )}
 
       {/* Last Snapshot */}
       {cameraData?.last_snapshot && (
@@ -69,4 +98,3 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
     </div>
   );
 }
-

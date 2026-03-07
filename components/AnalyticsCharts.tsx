@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Activity } from 'lucide-react';
 import { ClassroomData } from '@/firebase/listeners';
@@ -12,36 +12,73 @@ interface AnalyticsChartsProps {
 interface ChartDataPoint {
   time: string;
   motion: number;
+  timestamp: number;
 }
 
 export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps) {
   const [motionData, setMotionData] = useState<ChartDataPoint[]>([]);
+  const motionHistoryRef = useRef<ChartDataPoint[]>([]);
 
   useEffect(() => {
-    // Generate sample historical data (in production, fetch from Firebase)
-    const generateSampleData = () => {
-      const now = new Date();
-      const motionDataPoints: ChartDataPoint[] = [];
+    if (!classroomData) return;
 
-      for (let i = 23; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+    const now = Date.now();
+    const motionDetected = classroomData.motion_detected || false;
+    const timestamp = classroomData.timestamp || now;
 
-        // Simulate motion (0 or 1)
-        const motion = Math.random() > 0.6 ? 1 : 0;
-
-        motionDataPoints.push({
-          time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          motion: motion,
-        });
-      }
-
-      setMotionData(motionDataPoints);
+    // Add new reading to history
+    const newReading: ChartDataPoint = {
+      time: new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      motion: motionDetected ? 1 : 0,
+      timestamp: timestamp,
     };
 
-    generateSampleData();
-    const interval = setInterval(generateSampleData, 60000); // Update every minute
+    // Add to history
+    motionHistoryRef.current.push(newReading);
 
-    return () => clearInterval(interval);
+    // Keep only last 24 hours of data (1440 minutes = 24 hours, but we'll sample every few minutes)
+    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+    motionHistoryRef.current = motionHistoryRef.current.filter(
+      (point) => point.timestamp >= twentyFourHoursAgo
+    );
+
+    // Group by hour for display (last 24 hours)
+    const hourlyData: { [key: string]: { motion: number; count: number } } = {};
+    
+    motionHistoryRef.current.forEach((point) => {
+      const hour = new Date(point.timestamp).getHours();
+      const hourKey = `${hour}:00`;
+      
+      if (!hourlyData[hourKey]) {
+        hourlyData[hourKey] = { motion: 0, count: 0 };
+      }
+      
+      hourlyData[hourKey].motion += point.motion;
+      hourlyData[hourKey].count += 1;
+    });
+
+    // Convert to chart format (average motion per hour, 0 or 1)
+    const chartData: ChartDataPoint[] = [];
+    const nowDate = new Date();
+    
+    for (let i = 23; i >= 0; i--) {
+      const hourTime = new Date(nowDate.getTime() - i * 60 * 60 * 1000);
+      const hour = hourTime.getHours();
+      const hourKey = `${hour}:00`;
+      
+      const hourData = hourlyData[hourKey];
+      const avgMotion = hourData && hourData.count > 0 
+        ? (hourData.motion / hourData.count > 0.5 ? 1 : 0)
+        : 0;
+      
+      chartData.push({
+        time: hourTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        motion: avgMotion,
+        timestamp: hourTime.getTime(),
+      });
+    }
+
+    setMotionData(chartData);
   }, [classroomData]);
 
   return (
