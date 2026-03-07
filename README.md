@@ -4,10 +4,11 @@ A modern IoT monitoring dashboard for a Smart Classroom Automation System using 
 
 ## Features
 
-- 🎥 **Live Camera Feed** - Real-time video stream from ESP32-CAM
-- 🔍 **Motion Detection** - Real-time motion status with people count
-- 💡 **Device Control** - Remote control of lights and fans
-- 📊 **Analytics** - Charts showing motion activity, people count, and device usage
+- 🎥 **Live Camera Feed** - Real-time video stream from external camera
+- 🔍 **Motion Detection** - Real-time motion status and logs
+- 💡 **Device Control** - Remote control of LED indicator
+- 📊 **Analytics** - Charts showing motion activity over time
+- 📝 **Motion Logs** - Historical log of motion events from Firebase
 - ⚡ **Real-time Updates** - Automatic updates via Firebase Realtime Database
 
 ## Tech Stack
@@ -82,6 +83,10 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=YOUR_MEASUREMENT_ID
        "manual_override": {
          ".read": true,
          ".write": true
+       },
+       "motion_logs": {
+         ".read": true,
+         ".write": true
        }
      }
    }
@@ -96,22 +101,19 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=YOUR_MEASUREMENT_ID
    {
      "classroom": {
        "motion_detected": false,
-       "people_count": 0,
        "last_motion_time": 0
      },
      "devices": {
-       "light_zone1": false,
-       "light_zone2": false,
-       "fan": false
+       "led": false
      },
      "camera": {
        "live_feed_url": "",
        "last_snapshot": ""
      },
      "manual_override": {
-       "light_zone1": false,
-       "fan": false
-     }
+       "led": false
+     },
+     "motion_logs": {}
    }
    ```
 
@@ -140,16 +142,23 @@ Your ESP32-CAM should send data to Firebase in the following format:
 ### Classroom Data
 ```cpp
 Firebase.setBool("/classroom/motion_detected", motionDetected);
-Firebase.setInt("/classroom/people_count", peopleCount);
 Firebase.setInt("/classroom/last_motion_time", timestamp);
 ```
 
 ### Device Control Reading
 ```cpp
-// Read device states from Firebase
-bool lightZone1 = Firebase.getBool("/devices/light_zone1");
-bool lightZone2 = Firebase.getBool("/devices/light_zone2");
-bool fan = Firebase.getBool("/devices/fan");
+// Read device state from Firebase
+bool led = Firebase.getBool("/devices/led");
+```
+
+### Motion Logs
+```cpp
+// Push motion events to logs (optional, for dashboard history)
+Firebase.push("/motion_logs", {
+  "motion": motionDetected,
+  "timestamp": timestamp,
+  "last_updated": "2024-01-01 12:00:00"
+});
 ```
 
 ### Camera Feed
@@ -186,21 +195,23 @@ dashboard/
 
 ### 2. Motion Status
 - Real-time motion detection status
-- People count display
+- Room occupancy status
 - Last motion timestamp
 
 ### 3. Environment Stats
-- Classroom activity summary (motion / people count / last motion)
+- Classroom activity summary (motion / last motion)
 
 ### 4. Device Controls
-- Toggle lights (Zone 1 & Zone 2)
-- Control fan
+- Toggle LED indicator
 - Real-time state updates
 
-### 5. Analytics Charts
-- People count trend (24h)
+### 5. Motion Logs
+- Historical log of motion events
+- Real-time updates from Firebase
+- Timestamp and status for each event
+
+### 6. Analytics Charts
 - Motion detection activity (24h)
-- Device usage status
 
 ## Customization
 

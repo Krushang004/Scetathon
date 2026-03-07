@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Users, Clock } from 'lucide-react';
+import { Activity, Clock } from 'lucide-react';
 import { ClassroomData } from '@/firebase/listeners';
 
 interface EnvironmentStatsProps {
@@ -9,7 +9,6 @@ interface EnvironmentStatsProps {
 
 export default function EnvironmentStats({ classroomData }: EnvironmentStatsProps) {
   const motionDetected = classroomData?.motion_detected || false;
-  const peopleCount = classroomData?.people_count || 0;
   const lastMotionTime = classroomData?.last_motion_time
     ? new Date(classroomData.last_motion_time)
     : null;
@@ -27,7 +26,7 @@ export default function EnvironmentStats({ classroomData }: EnvironmentStatsProp
         Classroom Activity
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Activity Card */}
         <div className="bg-dark-bg rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
@@ -39,20 +38,6 @@ export default function EnvironmentStats({ classroomData }: EnvironmentStatsProp
           </div>
           <div className="text-xs text-text-secondary mt-1">
             {motionDetected ? 'Activity in classroom' : 'No recent motion'}
-          </div>
-        </div>
-
-        {/* People Count Card */}
-        <div className="bg-dark-bg rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Users className="w-5 h-5 text-text-secondary" />
-            <span className="text-xs text-text-secondary">People</span>
-          </div>
-          <div className="text-3xl font-bold text-text-primary">
-            {peopleCount}
-          </div>
-          <div className="text-xs text-text-secondary mt-1">
-            Detected in frame/sensors
           </div>
         </div>
 

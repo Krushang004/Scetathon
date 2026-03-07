@@ -14,21 +14,20 @@
 export const sampleDatabaseStructure = {
   classroom: {
     motion_detected: false,
-    people_count: 0,
     last_motion_time: Date.now(),
   },
   devices: {
-    light_zone1: false,
-    light_zone2: false,
-    fan: false,
+    led: false,
   },
   camera: {
-    live_feed_url: "http://192.168.1.100/stream", // Replace with your ESP32-CAM IP
-    last_snapshot: "", // Will be updated by ESP32-CAM
+    live_feed_url: "http://192.168.1.100/stream", // Replace with your external camera IP
+    last_snapshot: "",
   },
   manual_override: {
-    light_zone1: false,
-    fan: false,
+    led: false,
+  },
+  motion_logs: {
+    // Logs will be added automatically by ESP32/motion server
   },
 };
 
@@ -53,6 +52,10 @@ export const databaseRules = {
       ".write": true,
     },
     manual_override: {
+      ".read": true,
+      ".write": true,
+    },
+    motion_logs: {
       ".read": true,
       ".write": true,
     },

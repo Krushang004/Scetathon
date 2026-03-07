@@ -48,22 +48,19 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=YOUR_MEASUREMENT_ID
 {
   "classroom": {
     "motion_detected": false,
-    "people_count": 0,
     "last_motion_time": 0
   },
   "devices": {
-    "light_zone1": false,
-    "light_zone2": false,
-    "fan": false
+    "led": false
   },
   "camera": {
     "live_feed_url": "",
     "last_snapshot": ""
   },
   "manual_override": {
-    "light_zone1": false,
-    "fan": false
-  }
+    "led": false
+  },
+  "motion_logs": {}
 }
 ```
 
@@ -104,11 +101,10 @@ Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 
 // Send sensor data
 Firebase.setBool("/classroom/motion_detected", motion);
-Firebase.setInt("/classroom/people_count", count);
 Firebase.setInt("/classroom/last_motion_time", timestamp);
 
 // Read device control
-bool lightOn = Firebase.getBool("/devices/light_zone1");
+bool ledOn = Firebase.getBool("/devices/led");
 ```
 
 ## Testing Without ESP32-CAM

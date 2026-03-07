@@ -7,6 +7,7 @@ import MotionStatus from '@/components/MotionStatus';
 import EnvironmentStats from '@/components/EnvironmentStats';
 import DeviceControls from '@/components/DeviceControls';
 import AnalyticsCharts from '@/components/AnalyticsCharts';
+import MotionLogs from '@/components/MotionLogs';
 import { isRealtimeDbConfigured } from '@/firebase/config';
 import {
   listenToClassroom,
@@ -120,18 +121,15 @@ export default function Dashboard() {
               motionDetected={classroomData?.motion_detected || false}
             />
 
-            {/* Bottom Section - Controls and Analytics */}
+            {/* Bottom Section - Controls and Logs */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <DeviceControls devicesData={devicesData} />
-              <div className="lg:col-span-1">
-                {/* Placeholder for additional info or future components */}
-              </div>
+              <MotionLogs />
             </div>
 
             {/* Analytics Section */}
             <AnalyticsCharts 
               classroomData={classroomData}
-              devicesData={devicesData}
             />
           </div>
         )}

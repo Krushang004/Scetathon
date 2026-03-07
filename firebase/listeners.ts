@@ -1,17 +1,17 @@
 import { ref, onValue, off, set, get } from 'firebase/database';
 import { getRealtimeDatabase } from './config';
 
-// Types for Firebase data
 export interface ClassroomData {
-  motion_detected: boolean;
-  people_count: number;
+  motion: boolean;           // matches Python's push
+  motion_detected: boolean;  // alias for compatibility
+  status: string;            // 'Occupied' or 'Empty'
   last_motion_time: number;
+  last_updated: string;
+  timestamp: number;
 }
 
 export interface DevicesData {
-  light_zone1: boolean;
-  light_zone2: boolean;
-  fan: boolean;
+  led: boolean;
 }
 
 export interface CameraData {
@@ -20,11 +20,10 @@ export interface CameraData {
 }
 
 export interface ManualOverrideData {
-  light_zone1: boolean;
-  fan: boolean;
+  led: boolean;
 }
 
-// Listen to classroom data changes
+// Listen to classroom motion data
 export const listenToClassroom = (
   callback: (data: ClassroomData | null) => void
 ) => {
@@ -37,11 +36,21 @@ export const listenToClassroom = (
       return;
     }
 
-    classroomRef = ref(db, 'classroom');
+    // Listen to /classroom/motion — matches what Python pushes
+    classroomRef = ref(db, 'classroom/motion');
 
     onValue(classroomRef, (snapshot) => {
       const data = snapshot.val();
-      callback(data);
+      if (!data) {
+        callback(null);
+        return;
+      }
+      // Normalize: support both 'motion' and 'motion_detected' fields
+      callback({
+        ...data,
+        motion_detected: data.motion ?? data.motion_detected ?? false,
+        last_motion_time: data.timestamp ?? Date.now(),
+      });
     });
   })();
 
@@ -62,12 +71,9 @@ export const listenToDevices = (
       callback(null);
       return;
     }
-
     devicesRef = ref(db, 'devices');
-
     onValue(devicesRef, (snapshot) => {
-      const data = snapshot.val();
-      callback(data);
+      callback(snapshot.val());
     });
   })();
 
@@ -88,12 +94,9 @@ export const listenToCamera = (
       callback(null);
       return;
     }
-
     cameraRef = ref(db, 'camera');
-
     onValue(cameraRef, (snapshot) => {
-      const data = snapshot.val();
-      callback(data);
+      callback(snapshot.val());
     });
   })();
 
@@ -104,32 +107,71 @@ export const listenToCamera = (
 
 // Update device state
 export const updateDevice = async (
-  device: 'light_zone1' | 'light_zone2' | 'fan',
+  device: 'led',
   value: boolean
 ) => {
   const db = await getRealtimeDatabase();
-  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
-  const deviceRef = ref(db, `devices/${device}`);
-  await set(deviceRef, value);
+  if (!db) throw new Error('Firebase not configured');
+  await set(ref(db, `devices/${device}`), value);
 };
 
 // Update manual override
 export const updateManualOverride = async (
-  device: 'light_zone1' | 'fan',
+  device: 'led',
   value: boolean
 ) => {
   const db = await getRealtimeDatabase();
-  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
-  const overrideRef = ref(db, `manual_override/${device}`);
-  await set(overrideRef, value);
+  if (!db) throw new Error('Firebase not configured');
+  await set(ref(db, `manual_override/${device}`), value);
 };
 
-// Get historical data (for analytics)
+// Get historical data
 export const getHistoricalData = async (path: string) => {
   const db = await getRealtimeDatabase();
-  if (!db) throw new Error('Firebase Realtime Database is not configured (missing databaseURL).');
-  const dataRef = ref(db, path);
-  const snapshot = await get(dataRef);
+  if (!db) throw new Error('Firebase not configured');
+  const snapshot = await get(ref(db, path));
   return snapshot.val();
 };
 
+// Listen to motion logs
+export const listenToMotionLogs = (
+  callback: (logs: MotionLogEntry[] | null) => void
+) => {
+  let logsRef: ReturnType<typeof ref> | null = null;
+
+  (async () => {
+    const db = await getRealtimeDatabase();
+    if (!db) {
+      callback(null);
+      return;
+    }
+    logsRef = ref(db, 'motion_logs');
+    onValue(logsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        callback([]);
+        return;
+      }
+      // Convert object to array and sort by timestamp (newest first)
+      const logs = Object.entries(data)
+        .map(([id, entry]: [string, any]) => ({
+          id,
+          ...entry,
+        }))
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 50); // Keep last 50 entries
+      callback(logs);
+    });
+  })();
+
+  return () => {
+    if (logsRef) off(logsRef);
+  };
+};
+
+export interface MotionLogEntry {
+  id: string;
+  motion: boolean;
+  timestamp: number;
+  last_updated?: string;
+}
