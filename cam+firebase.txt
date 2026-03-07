@@ -1,0 +1,109 @@
+cam+firebase
+
+#include <LiquidCrystal_I2C.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+const char* wifi_name     = "Ved Kapadia";
+const char* wifi_password = "piyubhumi";
+const char* serverIP      = "172.20.10.7";
+#define RELAY_PIN 26
+#define LED_PIN   25
+unsigned long lastMotionTime = 0;
+const unsigned long timeout  = 15000;
+bool roomOccupied            = false;
+bool checkMotion() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi lost, reconnecting...");
+    WiFi.reconnect();
+    delay(2000);
+    return false;
+  }
+  HTTPClient http;
+  String url = "http://" + String(serverIP) + ":5000/motion";
+  http.begin(url);
+  http.setTimeout(2000);
+  int code = http.GET();
+  if (code != 200) {
+    Serial.printf("HTTP failed: %d\n", code);
+    http.end();
+    return false;
+  }
+  String body = http.getString();
+  http.end();
+  bool motion = body.indexOf("true") >= 0;
+  Serial.printf("Response: %s | Motion: %s\n", body.c_str(), motion ? "YES" : "no");
+  return motion;
+}
+void setRoom(bool occupied) {
+  roomOccupied = occupied;
+  if (occupied) {
+    digitalWrite(LED_PIN,   HIGH);
+    digitalWrite(RELAY_PIN, LOW);
+    Serial.println(">>> ROOM ON");
+  } else {
+    digitalWrite(LED_PIN,   LOW);
+    digitalWrite(RELAY_PIN, HIGH);
+    Serial.println(">>> ROOM OFF");
+  }
+}
+void updateLCD() {
+  lcd.setCursor(0, 0);
+  lcd.print(roomOccupied ? "Room Occupied   " : "Room Empty      ");
+  lcd.setCursor(0, 1);
+  long remaining = (long)(timeout - (millis() - lastMotionTime)) / 1000;
+  if (remaining < 0) remaining = 0;
+  lcd.print("Time:");
+  lcd.print(remaining);
+  lcd.print("s        ");
+}
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LED_PIN,   OUTPUT);
+  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(LED_PIN,   LOW);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0); lcd.print("Smart Classroom");
+  lcd.setCursor(0, 1); lcd.print("Connecting WiFi");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(wifi_name, wifi_password);
+  Serial.print("Connecting to WiFi");
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi OK: " + WiFi.localIP().toString());
+    lcd.setCursor(0, 1); lcd.print("WiFi OK!        ");
+  } else {
+    Serial.println("\nWiFi FAILED");
+    lcd.setCursor(0, 1); lcd.print("WiFi FAILED!    ");
+  }
+  delay(1500);
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print("Smart Classroom");
+  lcd.setCursor(0, 1); lcd.print("System Ready    ");
+  delay(2000);
+  lcd.clear();
+  setRoom(false);
+  lastMotionTime = millis();
+}
+void loop() {
+  bool motion = checkMotion();
+  if (motion) {
+    lastMotionTime = millis();
+    if (!roomOccupied) {
+      setRoom(true);
+    }
+  }
+  if (roomOccupied && (millis() - lastMotionTime > timeout)) {
+    setRoom(false);
+  }
+  updateLCD();
+  delay(500);
+}

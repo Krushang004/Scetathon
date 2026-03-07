@@ -5,21 +5,17 @@ import { Wifi, WifiOff } from 'lucide-react';
 import CameraFeed from '@/components/CameraFeed';
 import MotionStatus from '@/components/MotionStatus';
 import EnvironmentStats from '@/components/EnvironmentStats';
-import DeviceControls from '@/components/DeviceControls';
 import AnalyticsCharts from '@/components/AnalyticsCharts';
 import { isRealtimeDbConfigured } from '@/firebase/config';
 import {
   listenToClassroom,
-  listenToDevices,
   listenToCamera,
   ClassroomData,
-  DevicesData,
   CameraData,
 } from '@/firebase/listeners';
 
 export default function Dashboard() {
   const [classroomData, setClassroomData] = useState<ClassroomData | null>(null);
-  const [devicesData, setDevicesData] = useState<DevicesData | null>(null);
   const [cameraData, setCameraData] = useState<CameraData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,10 +29,6 @@ export default function Dashboard() {
       setLoading(false);
     });
 
-    // Listen to devices data
-    const unsubscribeDevices = listenToDevices((data) => {
-      setDevicesData(data);
-    });
 
     // Listen to camera data
     const unsubscribeCamera = listenToCamera((data) => {
@@ -46,7 +38,6 @@ export default function Dashboard() {
     // Cleanup listeners on unmount
     return () => {
       unsubscribeClassroom();
-      unsubscribeDevices();
       unsubscribeCamera();
     };
   }, []);
@@ -120,8 +111,6 @@ export default function Dashboard() {
               motionDetected={classroomData?.motion_detected || false}
             />
 
-            {/* Bottom Section - Controls */}
-            <DeviceControls devicesData={devicesData} />
 
             {/* Analytics Section */}
             <AnalyticsCharts 
