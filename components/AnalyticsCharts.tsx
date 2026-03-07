@@ -45,43 +45,45 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
       // Add to history (keep all readings, don't remove old ones)
       motionHistoryRef.current.push(newReading);
 
-      // Keep only last 24 hours of data
-      const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+      // Keep only last 1 hour of data
+      const oneHourAgo = now - (60 * 60 * 1000);
       motionHistoryRef.current = motionHistoryRef.current.filter(
-        (point) => point.timestamp >= twentyFourHoursAgo
+        (point) => point.timestamp >= oneHourAgo
       );
     }
 
-    // Group by hour for display (last 24 hours)
-    const hourlyData: { [key: number]: { motion: number; count: number } } = {};
+    // Group by minute for display (last 1 hour = 60 minutes)
+    const minuteData: { [key: number]: { motion: number; count: number } } = {};
     
     motionHistoryRef.current.forEach((point) => {
-      const hour = new Date(point.timestamp).getHours();
+      const date = new Date(point.timestamp);
+      const minute = date.getMinutes();
       
-      if (!hourlyData[hour]) {
-        hourlyData[hour] = { motion: 0, count: 0 };
+      if (!minuteData[minute]) {
+        minuteData[minute] = { motion: 0, count: 0 };
       }
       
-      hourlyData[hour].motion += point.motion;
-      hourlyData[hour].count += 1;
+      minuteData[minute].motion += point.motion;
+      minuteData[minute].count += 1;
     });
 
-    // Convert to chart format - show motion if ANY motion was detected in that hour
+    // Convert to chart format - show motion if ANY motion was detected in that minute
     const chartData: ChartDataPoint[] = [];
     const nowDate = new Date();
     
-    for (let i = 23; i >= 0; i--) {
-      const hourTime = new Date(nowDate.getTime() - i * 60 * 60 * 1000);
-      const hour = hourTime.getHours();
+    // Show last 60 minutes (1 hour)
+    for (let i = 59; i >= 0; i--) {
+      const minuteTime = new Date(nowDate.getTime() - i * 60 * 1000);
+      const minute = minuteTime.getMinutes();
       
-      const hourData = hourlyData[hour];
-      // If there was any motion in this hour, show it as 1
-      const hasMotion = hourData && hourData.count > 0 && hourData.motion > 0 ? 1 : 0;
+      const minuteInfo = minuteData[minute];
+      // If there was any motion in this minute, show it as 1
+      const hasMotion = minuteInfo && minuteInfo.count > 0 && minuteInfo.motion > 0 ? 1 : 0;
       
       chartData.push({
-        time: hourTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: minuteTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         motion: hasMotion,
-        timestamp: hourTime.getTime(),
+        timestamp: minuteTime.getTime(),
       });
     }
 
@@ -100,7 +102,7 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
         <div className="bg-dark-bg rounded-lg p-4">
           <h3 className="text-text-primary font-medium mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Motion Detection Activity (24h)
+            Motion Detection Activity (1h)
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={motionData}>
