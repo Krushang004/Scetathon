@@ -25,7 +25,7 @@ CAMERA_INDEX     = 1
 MOTION_COOLDOWN  = 5
 MIN_CONTOUR_AREA = 3000
 WARMUP_SECONDS   = 3
-STREAM_URL       = 'https://bustled-margarito-nitric.ngrok-free.dev/stream'
+STREAM_URL       = 'https://172.20.10.7:5000/stream'
 # ──────────────────────────────────────────────────────────
 
 motion_detected  = False
