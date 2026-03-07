@@ -36,7 +36,7 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
 
       {/* Live Feed */}
       <div className="mb-4">
-        <div className="relative bg-dark-bg rounded-lg overflow-hidden aspect-square max-w-md mx-auto">
+        <div className="relative bg-dark-bg rounded-lg overflow-hidden aspect-square w-full max-w-lg mx-auto">
           {cameraData?.live_feed_url ? (
             <>
               {/* img tag works for MJPEG streams, unlike iframe */}
