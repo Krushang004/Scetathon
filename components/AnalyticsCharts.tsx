@@ -15,9 +15,15 @@ interface ChartDataPoint {
   timestamp: number;
 }
 
+interface MotionReading {
+  timestamp: number;
+  motion: number;
+}
+
 export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps) {
   const [motionData, setMotionData] = useState<ChartDataPoint[]>([]);
-  const motionHistoryRef = useRef<ChartDataPoint[]>([]);
+  const motionHistoryRef = useRef<MotionReading[]>([]);
+  const lastTimestampRef = useRef<number>(0);
 
   useEffect(() => {
     if (!classroomData) return;
@@ -26,54 +32,55 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
     const motionDetected = classroomData.motion_detected || false;
     const timestamp = classroomData.timestamp || now;
 
-    // Add new reading to history
-    const newReading: ChartDataPoint = {
-      time: new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      motion: motionDetected ? 1 : 0,
-      timestamp: timestamp,
-    };
+    // Only add new reading if timestamp has changed (avoid duplicates)
+    if (timestamp !== lastTimestampRef.current) {
+      lastTimestampRef.current = timestamp;
 
-    // Add to history
-    motionHistoryRef.current.push(newReading);
+      // Add new reading to history
+      const newReading: MotionReading = {
+        timestamp: timestamp,
+        motion: motionDetected ? 1 : 0,
+      };
 
-    // Keep only last 24 hours of data (1440 minutes = 24 hours, but we'll sample every few minutes)
-    const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-    motionHistoryRef.current = motionHistoryRef.current.filter(
-      (point) => point.timestamp >= twentyFourHoursAgo
-    );
+      // Add to history (keep all readings, don't remove old ones)
+      motionHistoryRef.current.push(newReading);
+
+      // Keep only last 24 hours of data
+      const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+      motionHistoryRef.current = motionHistoryRef.current.filter(
+        (point) => point.timestamp >= twentyFourHoursAgo
+      );
+    }
 
     // Group by hour for display (last 24 hours)
-    const hourlyData: { [key: string]: { motion: number; count: number } } = {};
+    const hourlyData: { [key: number]: { motion: number; count: number } } = {};
     
     motionHistoryRef.current.forEach((point) => {
       const hour = new Date(point.timestamp).getHours();
-      const hourKey = `${hour}:00`;
       
-      if (!hourlyData[hourKey]) {
-        hourlyData[hourKey] = { motion: 0, count: 0 };
+      if (!hourlyData[hour]) {
+        hourlyData[hour] = { motion: 0, count: 0 };
       }
       
-      hourlyData[hourKey].motion += point.motion;
-      hourlyData[hourKey].count += 1;
+      hourlyData[hour].motion += point.motion;
+      hourlyData[hour].count += 1;
     });
 
-    // Convert to chart format (average motion per hour, 0 or 1)
+    // Convert to chart format - show motion if ANY motion was detected in that hour
     const chartData: ChartDataPoint[] = [];
     const nowDate = new Date();
     
     for (let i = 23; i >= 0; i--) {
       const hourTime = new Date(nowDate.getTime() - i * 60 * 60 * 1000);
       const hour = hourTime.getHours();
-      const hourKey = `${hour}:00`;
       
-      const hourData = hourlyData[hourKey];
-      const avgMotion = hourData && hourData.count > 0 
-        ? (hourData.motion / hourData.count > 0.5 ? 1 : 0)
-        : 0;
+      const hourData = hourlyData[hour];
+      // If there was any motion in this hour, show it as 1
+      const hasMotion = hourData && hourData.count > 0 && hourData.motion > 0 ? 1 : 0;
       
       chartData.push({
         time: hourTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        motion: avgMotion,
+        motion: hasMotion,
         timestamp: hourTime.getTime(),
       });
     }
