@@ -22,6 +22,7 @@ interface MotionReading {
 
 export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps) {
   const [motionData, setMotionData] = useState<ChartDataPoint[]>([]);
+  const [hourRange, setHourRange] = useState<string>('');
   const motionHistoryRef = useRef<MotionReading[]>([]);
   const lastTimestampRef = useRef<number>(0);
 
@@ -55,6 +56,10 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
     // Get current hour (e.g., if it's 6:30 AM, we show 6:00 AM to 7:00 AM)
     const nowDate = new Date();
     const currentHour = nowDate.getHours();
+    const nextHour = (currentHour + 1) % 24;
+    
+    // Set hour range for display
+    setHourRange(`${currentHour}:00 - ${nextHour}:00`);
     
     // Calculate the start of current hour (e.g., 6:00 AM)
     const hourStart = new Date(nowDate);
@@ -120,7 +125,7 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
         <div className="bg-dark-bg rounded-lg p-4">
           <h3 className="text-text-primary font-medium mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Motion Detection Activity ({new Date().getHours()}:00 - {new Date().getHours() + 1}:00)
+            Motion Detection Activity ({hourRange || 'Loading...'})
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={motionData}>
