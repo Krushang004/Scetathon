@@ -45,17 +45,36 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
       // Add to history (keep all readings, don't remove old ones)
       motionHistoryRef.current.push(newReading);
 
-      // Keep only last 1 hour of data
+      // Keep only last 1 hour of data for filtering
       const oneHourAgo = now - (60 * 60 * 1000);
       motionHistoryRef.current = motionHistoryRef.current.filter(
         (point) => point.timestamp >= oneHourAgo
       );
     }
 
-    // Group by minute for display (last 1 hour = 60 minutes)
+    // Get current hour (e.g., if it's 6:30 AM, we show 6:00 AM to 7:00 AM)
+    const nowDate = new Date();
+    const currentHour = nowDate.getHours();
+    
+    // Calculate the start of current hour (e.g., 6:00 AM)
+    const hourStart = new Date(nowDate);
+    hourStart.setMinutes(0);
+    hourStart.setSeconds(0);
+    hourStart.setMilliseconds(0);
+    
+    // Calculate the end of current hour (e.g., 7:00 AM)
+    const hourEnd = new Date(hourStart);
+    hourEnd.setHours(hourEnd.getHours() + 1);
+
+    // Filter readings to only current hour
+    const currentHourReadings = motionHistoryRef.current.filter(
+      (point) => point.timestamp >= hourStart.getTime() && point.timestamp < hourEnd.getTime()
+    );
+
+    // Group by minute within the current hour (0-59 minutes)
     const minuteData: { [key: number]: { motion: number; count: number } } = {};
     
-    motionHistoryRef.current.forEach((point) => {
+    currentHourReadings.forEach((point) => {
       const date = new Date(point.timestamp);
       const minute = date.getMinutes();
       
@@ -67,14 +86,13 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
       minuteData[minute].count += 1;
     });
 
-    // Convert to chart format - show motion if ANY motion was detected in that minute
+    // Convert to chart format - show all 60 minutes of the current hour
     const chartData: ChartDataPoint[] = [];
-    const nowDate = new Date();
     
-    // Show last 60 minutes (1 hour)
-    for (let i = 59; i >= 0; i--) {
-      const minuteTime = new Date(nowDate.getTime() - i * 60 * 1000);
-      const minute = minuteTime.getMinutes();
+    // Show all 60 minutes from current hour start (e.g., 6:00 to 6:59)
+    for (let minute = 0; minute < 60; minute++) {
+      const minuteTime = new Date(hourStart);
+      minuteTime.setMinutes(minute);
       
       const minuteInfo = minuteData[minute];
       // If there was any motion in this minute, show it as 1
@@ -102,7 +120,7 @@ export default function AnalyticsCharts({ classroomData }: AnalyticsChartsProps)
         <div className="bg-dark-bg rounded-lg p-4">
           <h3 className="text-text-primary font-medium mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Motion Detection Activity (1h)
+            Motion Detection Activity ({new Date().getHours()}:00 - {new Date().getHours() + 1}:00)
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={motionData}>
