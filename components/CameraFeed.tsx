@@ -36,7 +36,7 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
 
       {/* Live Feed */}
       <div className="mb-4">
-        <div className="relative bg-dark-bg rounded-lg overflow-hidden" style={{ height: '300px' }}>
+        <div className="relative bg-dark-bg rounded-lg overflow-hidden aspect-square max-w-md mx-auto">
           {cameraData?.live_feed_url ? (
             <>
               {/* img tag works for MJPEG streams, unlike iframe */}
@@ -59,7 +59,7 @@ export default function CameraFeed({ cameraData, motionDetected }: CameraFeedPro
               </div>
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center aspect-square">
               <div className="text-center">
                 <Camera className="w-16 h-16 mx-auto mb-2 text-text-secondary" />
                 <p className="text-text-secondary">No live feed available</p>
